@@ -10,6 +10,38 @@ const MemeGenerator = () => {
   const [memeImage, setMemeImage] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
 
+  const generateMemeWithHuggingFace = async (prompt: string) => {
+    const API_URL = "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-2-1";
+    const API_TOKEN = "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";
+    
+    try {
+      const response = await fetch(API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${API_TOKEN}`
+        },
+        body: JSON.stringify({
+          inputs: prompt
+        }),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to generate image");
+      }
+
+      // Get the image as a blob
+      const imageBlob = await response.blob();
+      // Create a URL for the blob
+      const imageUrl = URL.createObjectURL(imageBlob);
+      return imageUrl;
+    } catch (error) {
+      console.error("Error generating meme:", error);
+      throw error;
+    }
+  };
+
   const handleGenerateMeme = async () => {
     if (!prompt.trim()) {
       toast({
@@ -22,10 +54,8 @@ const MemeGenerator = () => {
 
     setIsGenerating(true);
     try {
-      // This is a placeholder for your API integration
-      // Replace with your actual API endpoint
-      const response = await simulateApiCall(prompt);
-      setMemeImage(response.imageUrl);
+      const imageUrl = await generateMemeWithHuggingFace(prompt);
+      setMemeImage(imageUrl);
       
       toast({
         title: "Meme generated!",
@@ -35,26 +65,12 @@ const MemeGenerator = () => {
       console.error("Error generating meme:", error);
       toast({
         title: "Generation failed",
-        description: "Something went wrong. Please try again.",
+        description: "Something went wrong with the Hugging Face API. Please try again.",
         variant: "destructive",
       });
     } finally {
       setIsGenerating(false);
     }
-  };
-
-  // This is a placeholder function - replace with actual API call
-  const simulateApiCall = (text: string) => {
-    // This simulates an API response for demo purposes
-    // Replace with your actual API integration
-    return new Promise<{ imageUrl: string }>((resolve) => {
-      setTimeout(() => {
-        resolve({
-          // Using a placeholder image for now
-          imageUrl: `https://picsum.photos/seed/${Date.now()}/600/400`,
-        });
-      }, 1500);
-    });
   };
 
   const handleDownload = () => {
