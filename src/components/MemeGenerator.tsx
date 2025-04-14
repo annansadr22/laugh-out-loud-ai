@@ -5,49 +5,26 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Download, RefreshCw } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 
 const MemeGenerator = () => {
   const [prompt, setPrompt] = useState("");
   const [memeImage, setMemeImage] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [apiKey, setApiKey] = useState("");
-  const [showApiKeyInput, setShowApiKeyInput] = useState(false);
 
-  const generateMemeWithAI = async (prompt: string, key: string) => {
+  const generateMemeWithFreeAPI = async (prompt: string) => {
     try {
-      // Using OpenAI's DALL-E API
-      const response = await fetch("https://api.openai.com/v1/images/generations", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${key}`
-        },
-        body: JSON.stringify({
-          model: "dall-e-3",
-          prompt: `Create a funny meme with: ${prompt}. Make it humorous and visually engaging.`,
-          n: 1,
-          size: "1024x1024",
-          response_format: "url"
-        }),
-      });
-
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error?.message || "Failed to generate image");
-      }
-      
-      return data.data[0].url;
-    } catch (error) {
-      console.error("Error generating meme:", error);
-      
-      // As a fallback, use unsplash if the OpenAI API fails
+      // Using Unsplash for random images based on the prompt
+      // This is a reliable free option that doesn't require an API key
       const seed = prompt.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
       const timestamp = Date.now();
-      return `https://source.unsplash.com/featured/?meme,funny,${encodeURIComponent(prompt)}/${seed}-${timestamp}`;
+      const searchTerms = prompt.split(' ').slice(0, 3).join(',');
+      
+      // Create a unique URL each time to avoid caching
+      return `https://source.unsplash.com/featured/?meme,funny,${encodeURIComponent(searchTerms)}/${seed}-${timestamp}`;
+    } catch (error) {
+      console.error("Error generating meme:", error);
+      throw new Error("Failed to generate image. Please try again.");
     }
   };
 
@@ -61,29 +38,11 @@ const MemeGenerator = () => {
       return;
     }
 
-    if (!apiKey && !showApiKeyInput) {
-      setShowApiKeyInput(true);
-      toast({
-        title: "API Key Required",
-        description: "Please enter your OpenAI API key to generate memes",
-      });
-      return;
-    }
-
-    if (showApiKeyInput && !apiKey.trim()) {
-      toast({
-        title: "Missing API Key",
-        description: "Please enter your OpenAI API key",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setIsGenerating(true);
     setError(null);
     
     try {
-      const imageUrl = await generateMemeWithAI(prompt, apiKey);
+      const imageUrl = await generateMemeWithFreeAPI(prompt);
       setMemeImage(imageUrl);
       
       toast({
@@ -92,11 +51,11 @@ const MemeGenerator = () => {
       });
     } catch (error: any) {
       console.error("Error generating meme:", error);
-      setError(error.message || "Failed to generate image. The AI service may be unavailable.");
+      setError(error.message || "Failed to generate image. Please try again later.");
       
       toast({
         title: "Generation failed",
-        description: error.message || "We couldn't connect to the AI service. Try again later.",
+        description: error.message || "Something went wrong. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -150,24 +109,6 @@ const MemeGenerator = () => {
           </Alert>
         )}
         <div className="space-y-4">
-          {showApiKeyInput && (
-            <div className="space-y-2">
-              <Label htmlFor="apiKey" className="block text-sm font-medium mb-1">
-                OpenAI API Key
-              </Label>
-              <Input
-                id="apiKey"
-                type="password"
-                placeholder="Enter your OpenAI API key"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                className="w-full"
-              />
-              <p className="text-xs text-muted-foreground">
-                Your API key is used only for this session and is not stored on our servers.
-              </p>
-            </div>
-          )}
           <div>
             <label htmlFor="prompt" className="block text-sm font-medium mb-1">
               Describe your meme
