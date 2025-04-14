@@ -14,8 +14,11 @@ const Index = () => {
           <>
             <div className="mb-10 text-center">
               <h1 className="text-4xl font-bold mb-3">AI Meme Generator</h1>
-              <p className="text-lg text-muted-foreground">
-                Turn your ideas into hilarious memes with the power of AI
+              <p className="text-lg text-muted-foreground mb-2">
+                Turn your ideas into hilarious memes with the power of OpenAI
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Powered by OpenAI's DALL-E, our generator creates unique, custom memes from your text
               </p>
             </div>
             <MemeGenerator />

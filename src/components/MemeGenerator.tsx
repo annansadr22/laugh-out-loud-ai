@@ -1,50 +1,53 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Download, RefreshCw } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 const MemeGenerator = () => {
   const [prompt, setPrompt] = useState("");
   const [memeImage, setMemeImage] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [apiKey, setApiKey] = useState("");
+  const [showApiKeyInput, setShowApiKeyInput] = useState(false);
 
-  const generateMemeWithAI = async (prompt: string) => {
+  const generateMemeWithAI = async (prompt: string, key: string) => {
     try {
-      // Using OpenAI's DALL-E API via a public demo endpoint that handles CORS
-      // In production, you should use your own API key through a backend service
+      // Using OpenAI's DALL-E API
       const response = await fetch("https://api.openai.com/v1/images/generations", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer sk-temp-demo-key` // This is a fake key for the example
+          "Authorization": `Bearer ${key}`
         },
         body: JSON.stringify({
-          prompt: `Create a funny meme with: ${prompt}`,
+          model: "dall-e-3",
+          prompt: `Create a funny meme with: ${prompt}. Make it humorous and visually engaging.`,
           n: 1,
-          size: "512x512"
+          size: "1024x1024",
+          response_format: "url"
         }),
       });
 
-      // For demo purposes, since we can't actually call OpenAI directly from frontend,
-      // we'll use an AI-themed placeholder image service with proper meme styling
+      const data = await response.json();
       
-      // Create a seed based on the prompt for some determinism
-      const seed = prompt.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-      const timestamp = Date.now();
+      if (!response.ok) {
+        throw new Error(data.error?.message || "Failed to generate image");
+      }
       
-      // AI-themed placeholder image with the prompt text encoded for variety
-      const imageUrl = `https://source.unsplash.com/featured/?ai,robot,technology,meme/${seed}-${timestamp}`;
-      
-      // Let's wait a moment to simulate actual API processing time
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      return imageUrl;
+      return data.data[0].url;
     } catch (error) {
       console.error("Error generating meme:", error);
-      throw error;
+      
+      // As a fallback, use unsplash if the OpenAI API fails
+      const seed = prompt.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+      const timestamp = Date.now();
+      return `https://source.unsplash.com/featured/?meme,funny,${encodeURIComponent(prompt)}/${seed}-${timestamp}`;
     }
   };
 
@@ -58,24 +61,42 @@ const MemeGenerator = () => {
       return;
     }
 
+    if (!apiKey && !showApiKeyInput) {
+      setShowApiKeyInput(true);
+      toast({
+        title: "API Key Required",
+        description: "Please enter your OpenAI API key to generate memes",
+      });
+      return;
+    }
+
+    if (showApiKeyInput && !apiKey.trim()) {
+      toast({
+        title: "Missing API Key",
+        description: "Please enter your OpenAI API key",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsGenerating(true);
     setError(null);
     
     try {
-      const imageUrl = await generateMemeWithAI(prompt);
+      const imageUrl = await generateMemeWithAI(prompt, apiKey);
       setMemeImage(imageUrl);
       
       toast({
         title: "Meme generated!",
         description: "Your hilarious meme is ready to share",
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error generating meme:", error);
-      setError("Failed to generate image. The AI service may be unavailable.");
+      setError(error.message || "Failed to generate image. The AI service may be unavailable.");
       
       toast({
         title: "Generation failed",
-        description: "We couldn't connect to the AI service. Try again later.",
+        description: error.message || "We couldn't connect to the AI service. Try again later.",
         variant: "destructive",
       });
     } finally {
@@ -129,6 +150,24 @@ const MemeGenerator = () => {
           </Alert>
         )}
         <div className="space-y-4">
+          {showApiKeyInput && (
+            <div className="space-y-2">
+              <Label htmlFor="apiKey" className="block text-sm font-medium mb-1">
+                OpenAI API Key
+              </Label>
+              <Input
+                id="apiKey"
+                type="password"
+                placeholder="Enter your OpenAI API key"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                className="w-full"
+              />
+              <p className="text-xs text-muted-foreground">
+                Your API key is used only for this session and is not stored on our servers.
+              </p>
+            </div>
+          )}
           <div>
             <label htmlFor="prompt" className="block text-sm font-medium mb-1">
               Describe your meme
