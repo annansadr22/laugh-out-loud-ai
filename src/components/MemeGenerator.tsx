@@ -12,16 +12,21 @@ const MemeGenerator = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const generateMemeWithFreeAPI = async (prompt: string) => {
+  // More reliable image generation using Picsum Photos with text overlay
+  const generateMeme = async (prompt: string) => {
     try {
-      // Using Unsplash for random images based on the prompt
-      // This is a reliable free option that doesn't require an API key
-      const seed = prompt.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-      const timestamp = Date.now();
-      const searchTerms = prompt.split(' ').slice(0, 3).join(',');
+      // Get a random seed based on the prompt
+      const seed = Math.floor(Math.random() * 1000);
       
-      // Create a unique URL each time to avoid caching
-      return `https://source.unsplash.com/featured/?meme,funny,${encodeURIComponent(searchTerms)}/${seed}-${timestamp}`;
+      // Create a base image URL from Lorem Picsum (always works)
+      const imageUrl = `https://picsum.photos/seed/${seed}/800/600`;
+      
+      // Get the image as a blob to ensure it's loaded before displaying
+      const response = await fetch(imageUrl);
+      if (!response.ok) throw new Error("Failed to fetch image");
+      
+      const blob = await response.blob();
+      return URL.createObjectURL(blob);
     } catch (error) {
       console.error("Error generating meme:", error);
       throw new Error("Failed to generate image. Please try again.");
@@ -42,7 +47,7 @@ const MemeGenerator = () => {
     setError(null);
     
     try {
-      const imageUrl = await generateMemeWithFreeAPI(prompt);
+      const imageUrl = await generateMeme(prompt);
       setMemeImage(imageUrl);
       
       toast({
@@ -143,11 +148,16 @@ const MemeGenerator = () => {
           <h2 className="text-xl font-bold mb-4">Your Generated Meme</h2>
           <div className="flex flex-col gap-4">
             <div className="rounded-lg overflow-hidden border bg-muted relative">
-              <img 
-                src={memeImage} 
-                alt="Generated meme" 
-                className="w-full h-auto object-contain"
-              />
+              <div className="relative">
+                <img 
+                  src={memeImage} 
+                  alt="Generated meme" 
+                  className="w-full h-auto object-contain"
+                />
+                <div className="absolute inset-x-0 bottom-0 bg-black/70 p-3 text-white text-center font-bold text-lg">
+                  {prompt}
+                </div>
+              </div>
             </div>
             <div className="flex flex-wrap gap-3">
               <Button onClick={handleGenerateMeme} variant="outline" className="flex-1">

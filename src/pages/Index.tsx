@@ -18,7 +18,7 @@ const Index = () => {
                 Turn your ideas into hilarious memes instantly
               </p>
               <p className="text-sm text-muted-foreground">
-                Our generator creates unique, custom memes from your text descriptions
+                Our generator creates unique, custom memes with your text overlaid
               </p>
             </div>
             <MemeGenerator />
